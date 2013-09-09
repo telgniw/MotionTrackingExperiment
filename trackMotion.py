@@ -76,8 +76,7 @@ if __name__ == '__main__':
 
     # Parse command line arguments.
     parser = argparse.ArgumentParser(description='Motion tracking.')
-    parser.add_argument('video_file', metavar='F', default=None,
-        help='video file name')
+    parser.add_argument('video_file', metavar='F', help='video file name')
 
     args = parser.parse_args()
 
