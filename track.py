@@ -15,14 +15,10 @@ class Window:
         cv2.waitKey(int(1000 / self.fps));
 
 class Tracker:
-    def __init__(self, video_file=None):
-        if video_file is not None:
-            # Convert to absolute path to get around the problem on Mac.
-            # http://stackoverflow.com/a/9396912/881930
-            video_file = os.path.join(os.getcwd(), video_file)
-        else:
-            # Set video input to the first camera if no file is specified.
-            video_file = 0
+    def __init__(self, video_file):
+        # Convert to absolute path to get around the problem on Mac.
+        # http://stackoverflow.com/a/9396912/881930
+        video_file = os.path.join(os.getcwd(), video_file)
 
         self.capture = cv2.VideoCapture(video_file)
 
@@ -79,8 +75,8 @@ if __name__ == '__main__':
     import argparse
 
     # Parse command line arguments.
-    parser = argparse.ArgumentParser(description='')
-    parser.add_argument('-f', '--video_file', default=None,
+    parser = argparse.ArgumentParser(description='Motion tracking.')
+    parser.add_argument('video_file', metavar='F', default=None,
         help='video file name')
 
     args = parser.parse_args()
