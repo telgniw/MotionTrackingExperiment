@@ -22,25 +22,62 @@ class Tracker:
             # Use the defaul camera as input.
             video_file = 0
 
+        self.target = cv2.imread(image_file)
         self.capture = cv2.VideoCapture(video_file)
         self.window = Window('Object Tracking Experiment')
 
+        self.detector = None
+        self.matcher = None
+
+    def detect_features(self, img):
+        if self.detector is None:
+            # Use ORB as an alternative to SURF or SIFT.
+            self.detector = cv2.ORB()
+
+        # Convert to gray-scale before running feature detection.
+        gray_img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+
+        return self.detector.detectAndCompute(gray_img, None)
+
+    def match_features(self, query, template):
+        if self.matcher is None:
+            # Use Brute-Force matcher for matching descriptors.
+            self.matcher = cv2.BFMatcher()
+
+        # Find two nearest-neighbors.
+        return self.matcher.knnMatch(query, template, 2)
+
     def run(self):
+        _, target_descriptors = self.detect_features(self.target)
+
         while self.window.waitKey('q'):
             ret, img = self.capture.read()
 
             if not ret:
                 break
 
-            gray_img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+            points, descriptors = self.detect_features(img)
+            matches = self.match_features(descriptors, target_descriptors)
 
-            # Use ORB as an alternative to SURF or SIFT.
-            detector = cv2.ORB()
-            points = detector.detect(gray_img)
+            # Nearest-neighbor distance ratio is set to 0.6.
+            match_points = []
+            for m in matches:
+                if m[0].distance <= 0.6 *  m[1].distance:
+                    match_points.append(m[0].queryIdx)
+            match_points.sort()
 
+            # Draw matched points in green, and unmatched points in red.
+            j = 0
             for i, p in enumerate(points):
+                is_matched = False
+                if j < len(match_points):
+                    if i >= match_points[j]:
+                        if i == match_points[j]:
+                            is_matched = True
+                        j += 1
                 x, y = p.pt
-                cv2.circle(img, (int(x), int(y)), 2, (0, 255, 0), thickness=-1)
+                cv2.circle(img, (int(x), int(y)), 2,
+                    (0, 255, 0) if is_matched else (0, 0, 255), thickness=-1)
 
             self.window.draw(img)
 
