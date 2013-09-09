@@ -1,12 +1,12 @@
 #!/usr/bin/env python
-import cv, cv2, numpy, os
+import cv, cv2, numpy, random, os
 
 class Window:
     def __init__(self, window_name, fps):
         self.name = window_name
         self.fps = fps
 
-        cv2.namedWindow(self.name, cv.CV_WINDOW_AUTOSIZE)
+        cv2.namedWindow(self.name, cv2.WINDOW_AUTOSIZE)
 
     def draw(self, img):
         cv2.imshow(self.name, img)
@@ -52,13 +52,28 @@ class Tracker:
             fg_img = numpy.dstack([img[:,:,i] * fg_mask for i in range(3)])
 
             # Convert to gray scale and threshold to binary image.
-            gray_img = cv2.cvtColor(fg_img, cv.CV_RGB2GRAY)
-            _, gray_img = cv2.threshold(gray_img, 2, 255, cv.CV_THRESH_BINARY)
+            gray_img = cv2.cvtColor(fg_img, cv2.COLOR_RGB2GRAY)
+            _, gray_img = cv2.threshold(gray_img, 2, 255, cv2.THRESH_BINARY)
             gray_img = cv2.GaussianBlur(gray_img, (7, 7), 0)
-            _, gray_img = cv2.threshold(gray_img, 240, 255, cv.CV_THRESH_BINARY)
+            _, gray_img = cv2.threshold(gray_img, 240, 255, cv2.THRESH_BINARY)
 
+            # Calculate contours in the image.
+            # Make a copy because `findContours` will modify the source image.
+            cpy = numpy.copy(gray_img)
+            contours, hierarchy = cv2.findContours(cpy, cv2.RETR_CCOMP,
+                cv2.CHAIN_APPROX_SIMPLE)
 
-            self.window.draw(gray_img)
+            if hierarchy is not None:
+                idx, color = 0, []
+                while idx >= 0:
+                    while idx >= len(color):
+                        c = [random.randint(0, 99), random.randint(100, 199), random.randint(200, 255)]
+                        random.shuffle(c)
+                        color.append(tuple(c))
+                    cv2.drawContours(img, contours, idx, color[idx], thickness=-1)
+                    idx = hierarchy[0][idx][0]
+
+            self.window.draw(img)
 
 if __name__ == '__main__':
     import argparse
