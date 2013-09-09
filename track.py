@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import cv, cv2, numpy, os, sys
+import cv, cv2, numpy, os
 
 class Window:
     def __init__(self, window_name, fps):
@@ -36,13 +36,29 @@ class Tracker:
         self.window = Window('Motion Tracking Experiment', self.fps)
 
     def run(self):
+        # Default values for BackgroundSubtractorMOG:
+        # history=200, nmixtures=5, backgroundRatio=0.7, noiseSigma=15.0
+        bgsub = cv2.BackgroundSubtractorMOG()
+
         for i in range(self.length):
             ret, img = self.capture.read()
 
             if not ret:
                 break
 
-            self.window.draw(img)
+            # Get foreground image.
+            fg_mask = bgsub.apply(img, learningRate=0.01)
+            fg_mask /= 255
+            fg_img = numpy.dstack([img[:,:,i] * fg_mask for i in range(3)])
+
+            # Convert to gray scale and threshold to binary image.
+            gray_img = cv2.cvtColor(fg_img, cv.CV_RGB2GRAY)
+            _, gray_img = cv2.threshold(gray_img, 2, 255, cv.CV_THRESH_BINARY)
+            gray_img = cv2.GaussianBlur(gray_img, (7, 7), 0)
+            _, gray_img = cv2.threshold(gray_img, 240, 255, cv.CV_THRESH_BINARY)
+
+
+            self.window.draw(gray_img)
 
 if __name__ == '__main__':
     import argparse

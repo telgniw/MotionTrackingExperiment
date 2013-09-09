@@ -3,6 +3,10 @@ Motion Tracking Experiment
 
 Blah blah blah.
 
+Method Implemented
+------------------
+
+Reference: http://derek.simkowiak.net/motion-tracking-with-python/
 
 Video Format
 ------------
