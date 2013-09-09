@@ -6,7 +6,10 @@ Blah blah blah.
 Method Implemented
 ------------------
 
-Reference: http://derek.simkowiak.net/motion-tracking-with-python/
+Reference:
+
+- http://derek.simkowiak.net/motion-tracking-with-python/
+- http://code.google.com/p/find-object/
 
 Video Format
 ------------
