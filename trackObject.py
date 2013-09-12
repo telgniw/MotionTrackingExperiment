@@ -13,8 +13,8 @@ class Window:
         return cv2.waitKey(int(1000 / self.fps)) is not ord(key)
 
 class Target:
-    def __init__(self, keypoints, descriptors):
-        self.keypoints, self.descriptors = keypoints, descriptors
+    def __init__(self, img, keypoints, descriptors):
+        self.img, self.keypoints, self.descriptors = img, keypoints, descriptors
 
 class Matcher:
     NN_K        = 2     # The parameter K of K-nearest-neighbor.
@@ -28,65 +28,83 @@ class Matcher:
         self.detector = cv2.ORB()
         self.matcher = cv2.BFMatcher(cv2.NORM_HAMMING)
 
-        self.targets = []
-
-    def add_target(self, keypoints, descriptors):
-        self.targets.append(Target(keypoints, descriptors))
-
     def detect(self, img):
         # Convert to gray-scale before running feature detection.
         gray_img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
         return self.detector.detectAndCompute(gray_img, None)
 
-    def match(self, keypoints, descriptors):
+    def _filtered_knn_match(self, descriptors_l, descriptors_r):
+        try:
+            matches = self.matcher.knnMatch(descriptors_l, descriptors_r,
+                Matcher.NN_K)
+        except:
+            return []
+
+        f_nnk = lambda m: len(m) >= 2
+        f_nndr = lambda m: m[0].distance >= Matcher.NN_DR * m[1].distance
+
+        return filter(f_nndr, filter(f_nnk, matches))
+
+    def _get_matched_points(self, matches, keypoints_l, keypoints_r):
+        points_l, points_r = [], []
+        for m in matches:
+            points_l.append(keypoints_l[m.queryIdx].pt)
+            points_r.append(keypoints_r[m.trainIdx].pt)
+
+        return numpy.array(points_l), numpy.array(points_r)
+
+    def _ransac(self, matches, keypoints_l, keypoints_r, method=cv2.FM_RANSAC):
+        points_l, points_r = self._get_matched_points(matches, keypoints_l,
+            keypoints_r)
+
+        _, inliers = cv2.findFundamentalMat(points_l, points_r,
+            method, Matcher.RANSAC_D, Matcher.RANSAC_C)
+
+        good_matches = []
+        for m, is_inliner in zip(matches, inliers):
+            if is_inliner:
+                good_matches.append(m)
+
+        return good_matches
+
+    def _h_matrix(self, matches, keypoints_l, keypoints_r):
+        points_l, points_r = self._get_matched_points(matches, keypoints_l,
+            keypoints_r)
+        h, inliers = cv2.findHomography(points_r, points_l, cv2.FM_RANSAC)
+        inliers = inliers.reshape(1, len(inliers))[0]
+
+        return h, inliers
+
+    def match(self, keypoints, descriptors, target):
         # Use the RobustMatcher method to filter matches.
         # http://stackoverflow.com/a/9894455/881930
-        final_matches = []
 
-        def filtered_match(descriptors_l, descriptors_r):
-            matches = self.matcher.knnMatch(descriptors_l, descriptors_r, Matcher.NN_K)
-            f_nndr = lambda m: m[0].distance >= Matcher.NN_DR * m[1].distance
-            return filter(f_nndr, matches)
+        matches_l = self._filtered_knn_match(descriptors, target.descriptors)
+        matches_r = self._filtered_knn_match(target.descriptors, descriptors)
 
-        def run_ransac(matches, keypoints_l, keypoints_r, method=cv2.FM_RANSAC):
-            points_l, points_r = [], []
-            for m in matches:
-                points_l.append(keypoints_l[m.queryIdx].pt)
-                points_r.append(keypoints_r[m.trainIdx].pt)
+        # Keep only symmetric matches.
+        matches = []
+        for ml in matches_l:
+            for mr in matches_r:
+                if ml[0].queryIdx == mr[0].trainIdx and \
+                        ml[0].trainIdx == mr[0].queryIdx:
+                    matches.append(ml[0])
 
-            points_l, points_r = numpy.array(points_l), numpy.array(points_r)
+        if len(matches) == 0:
+            return None, 0.0, matches
 
-            _, inliners = cv2.findFundamentalMat(points_l, points_r,
-                method, Matcher.RANSAC_D, Matcher.RANSAC_C)
+        # Identify good matches using RANSAC.
+        good_matches = self._ransac(matches, keypoints, target.keypoints)
 
-            good_matches = []
-            for m, is_inliner in zip(matches, inliners):
-                if is_inliner:
-                    good_matches.append(m)
+        if len(good_matches) == 0:
+            return None, 0.0, good_matches
 
-            return good_matches
+        # Calculate homography matrix.
+        h, inliers = self._h_matrix(good_matches, keypoints, target.keypoints)
+        confidence = numpy.average(inliers)
 
-        for target in self.targets:
-            matches_l = filtered_match(descriptors, target.descriptors)
-            matches_r = filtered_match(target.descriptors, descriptors)
-
-            # Keep only symmetric matches.
-            matches = []
-            for ml in matches_l:
-                for mr in matches_r:
-                    if ml[0].queryIdx == mr[0].trainIdx and \
-                            ml[0].trainIdx == mr[0].queryIdx:
-                        matches.append(ml[0])
-
-            if len(matches) == 0:
-                continue
-
-            # Identify good matches using RANSAC.
-            good_matches = run_ransac(matches, keypoints, target.keypoints)
-            final_matches += good_matches
-
-        return final_matches
+        return h, confidence, good_matches
 
 class Tracker:
     def __init__(self, image_files, video_file=None):
@@ -105,11 +123,12 @@ class Tracker:
         self.window = Window('Object Tracking Experiment')
 
     def run(self):
+        targets = []
         for image_file in self.image_files:
             img = cv2.imread(image_file)
             keypoints, descriptors = self.matcher.detect(img)
 
-            self.matcher.add_target(keypoints, descriptors)
+            targets.append(Target(img, keypoints, descriptors))
 
         while self.window.waitKey('q'):
             ret, img = self.capture.read()
@@ -118,11 +137,36 @@ class Tracker:
                 break
 
             keypoints, descriptors = self.matcher.detect(img)
-            matches = self.matcher.match(keypoints, descriptors)
 
+            # Calculate matches for each target image template.
             match_indices = set()
-            for m in matches:
-                match_indices.add(m.queryIdx)
+            for target in targets:
+                h, confidence, matches = self.matcher.match(keypoints,
+                    descriptors, target)
+
+                # Calculate matched indices set.
+                for m in matches:
+                    match_indices.add(m.queryIdx)
+
+                if h is None:
+                    continue
+
+                # Calculate bounding rectangle for matched target.
+                width, height, _ = target.img.shape
+                rect = numpy.array([[
+                    (0, 0), (width, 0), (width, height), (0, height)]],
+                    dtype='float32')
+                new_rect = cv2.perspectiveTransform(rect, h).astype(int)[0]
+
+                c = (int(numpy.average(map(itemgetter(0), new_rect))),
+                    int(numpy.average(map(itemgetter(1), new_rect))))
+                r = 10
+
+                # Draw the estimated bounding circle with blue edges.
+                cv2.circle(img, c, r - 1, (255, 0, 0))
+                cv2.circle(img, c, r, (255, 0, 0))
+                cv2.circle(img, c, r + 5, (255, 0, 0))
+
             match_indices = list(match_indices)
             match_indices.sort()
 
