@@ -102,9 +102,8 @@ class Matcher:
 
         # Calculate homography matrix.
         h, inliers = self._h_matrix(good_matches, keypoints, target.keypoints)
-        confidence = numpy.average(inliers)
 
-        return h, confidence, good_matches
+        return h, inliers, good_matches
 
 class Tracker:
     def __init__(self, image_files, video_file=None):
@@ -154,18 +153,25 @@ class Tracker:
                 # Calculate bounding rectangle for matched target.
                 width, height, _ = target.img.shape
                 rect = numpy.array([[
-                    (0, 0), (width, 0), (width, height), (0, height)]],
+                    (0, 0), (0, width), (height, width), (height, 0)]],
                     dtype='float32')
-                new_rect = cv2.perspectiveTransform(rect, h).astype(int)[0]
+                new_rect = cv2.perspectiveTransform(rect, h).astype(int)
 
-                c = (int(numpy.average(map(itemgetter(0), new_rect))),
-                    int(numpy.average(map(itemgetter(1), new_rect))))
-                r = 10
+                c = (int(numpy.average(map(itemgetter(0), new_rect[0]))),
+                    int(numpy.average(map(itemgetter(1), new_rect[0]))))
 
                 # Draw the estimated bounding circle with blue edges.
-                cv2.circle(img, c, r - 1, (255, 0, 0))
-                cv2.circle(img, c, r, (255, 0, 0))
-                cv2.circle(img, c, r + 5, (255, 0, 0))
+                cv2.circle(img, c, 10, (255, 0, 0), thickness=5)
+                cv2.polylines(img, new_rect, True, (255, 0, 0), thickness=5)
+
+                # Draw the center of matched good points.
+                good_points = []
+                for m in matches:
+                    good_points.append(keypoints[m.queryIdx].pt)
+                c = (int(numpy.average(map(itemgetter(0), good_points))),
+                    int(numpy.average(map(itemgetter(1), good_points))))
+                
+                cv2.circle(img, c, 10, (255, 0, 255), thickness=5)
 
             match_indices = list(match_indices)
             match_indices.sort()
