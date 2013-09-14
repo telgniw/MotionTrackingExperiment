@@ -9,6 +9,8 @@ class Window:
     def show(self, img):
         self.img = img
         cv2.imshow(self.name, self.img)
+
+    def wait(self):
         return cv2.waitKey(int(1000 / self.fps))
 
     def snapshot(self, filename):
