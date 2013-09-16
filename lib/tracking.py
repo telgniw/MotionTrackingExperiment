@@ -90,15 +90,15 @@ class Detector:
         
         w, h, _ = tr.img.shape
         rect = numpy.array([[(0, 0), (0, w), (h ,w), (h, 0)]], numpy.float32)
-        rect = cv2.perspectiveTransform(rect, h_mat).astype(int)[0]
+        poly = cv2.perspectiveTransform(rect, h_mat).astype(int)
 
-        if not util.is_quadrangle(rect):
+        if not util.is_quadrangle(poly[0]):
             return None
 
-        if min(util.angles(rect)) < Detector.HOMOGRAPHY_MI_A:
+        if min(util.angles(poly[0])) < Detector.HOMOGRAPHY_MI_A:
             return None
 
-        return rect
+        return cv2.boundingRect(poly)
 
     def _match(self, tl, tr):
         # Reference the RobustMatcher for matching
@@ -130,4 +130,8 @@ class Detector:
         return self.detector.detectAndCompute(gray_img, None)
 
 class Tracker:
-    pass
+    def set_image(self, img):
+        pass
+
+    def update_frame(self, frame):
+        pass
