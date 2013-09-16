@@ -16,13 +16,21 @@ class Cmd(cmd.Cmd):
     def do_exit(self, _):
         return True
 
+    def do_add(self, filename):
+        if os.path.exists(filename):
+            filename = os.path.abspath(filename)
+            self.main.do_add_target(filename)
+        else:
+            print 'Error: file not found "%s"' % filename
+
     def do_camera(self, cid):
         try:
             cid = int(cid)
         except:
             cid = None
 
-        self.main.set_camera_id(cid)
+        self.main.do_switch_camera(cid)
+        print 'Switching to camera', cid
 
     def do_snapshot(self, filename):
         if filename:
@@ -30,8 +38,8 @@ class Cmd(cmd.Cmd):
         else:
             filename = datetime.now().strftime('frame_%Y%m%d_%H%M%S.png')
 
-        self.main.snapshot(filename)
-        print 'Saving to ', filename
+        self.main.do_snapshot(filename)
+        print 'Saving to', filename
 
 class CmdRunner(threading.Thread):
     def __init__(self, main):

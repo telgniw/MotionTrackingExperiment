@@ -2,6 +2,9 @@
 import cv2
 
 class Camera:
+    def __init__(self):
+        self.capture = None
+
     def get_frame(self):
         if self.capture is None:
             return None
@@ -9,7 +12,7 @@ class Camera:
         ret, img = self.capture.read()
         return img if ret else None
 
-    def set_id(self, cid):
+    def switch(self, cid):
         if cid is None:
             self.capture = None
         else:

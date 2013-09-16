@@ -1,17 +1,30 @@
 #!/usr/bin/env python
-import cv2
+import cv2, numpy
 
 class Window:
+    THICKNESS   = 3
+
     def __init__(self, name, fps=30):
-        self.name, self.fps = name, 30
+        self.name, self.fps = name, fps
         cv2.namedWindow(self.name, cv2.WINDOW_AUTOSIZE)
 
-    def show(self, img):
-        self.img = img
-        cv2.imshow(self.name, self.img)
+    def clear(self):
+        self.img = numpy.zeros((480, 640, 3), numpy.uint8)
 
-    def wait(self):
+    def draw_rectangle(self, rect, color):
+        cv2.rectangle(self.img, rect[0], rect[1], color,
+            thickness=Window.THICKNESS)
+
+    def draw_polylines(self, poly, color):
+        cv2.polylines(self.img, numpy.array([poly]), True, color,
+            thickness=Window.THICKNESS)
+
+    def update(self):
+        cv2.imshow(self.name, self.img)
         return cv2.waitKey(int(1000 / self.fps))
+
+    def set_image(self, img):
+        self.img = img
 
     def snapshot(self, filename):
         return cv2.imwrite(filename, self.img)
