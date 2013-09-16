@@ -42,7 +42,7 @@ class Main:
 
                 rects = self.detector.detect(img)
                 for rect in rects:
-                    self.window.draw_polylines(rect, (255, 0, 0))
+                    self.window.draw_rectangle(rect, (255, 0, 0))
             except Exception as e:
                 print >> sys.stderr, e
             finally:

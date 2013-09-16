@@ -12,7 +12,8 @@ class Window:
         self.img = numpy.zeros((480, 640, 3), numpy.uint8)
 
     def draw_rectangle(self, rect, color):
-        cv2.rectangle(self.img, rect[0], rect[1], color,
+        x, y, w, h = rect
+        cv2.rectangle(self.img, (x, y), (x + w, y + h), color,
             thickness=Window.THICKNESS)
 
     def draw_polylines(self, poly, color):
