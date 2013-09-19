@@ -119,9 +119,7 @@ class Detector:
         rects = []
         for target in self.targets:
             rect = self._match(source, target)
-
-            if rect is not None:
-                rects.append(rect)
+            rects.append(rect)
 
         return rects
 
@@ -130,8 +128,41 @@ class Detector:
         return self.detector.detectAndCompute(gray_img, None)
 
 class Tracker:
-    def set_image(self, img):
-        pass
+    def __init__(self):
+        self.term_criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT,
+            10, 1)
+        self.track_window = None
 
-    def update_frame(self, frame):
-        pass
+    def track(self, img):
+        if self.track_window is None:
+            return None
+
+        # Reference the OpenCV2 Python Tutorials by abidrahmank for tracking
+        # https://github.com/abidrahmank/OpenCV2-Python-Tutorials/ (buggy)
+        # and Panaroid Android for bug-fixing
+        # http://jayrambhia.wordpress.com/2012/07/11/face-tracking-with-camshift-using-opencvsimplecv/
+        hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+        dst = cv2.calcBackProject([hsv], [0], self.hist, [0, 180], 1)
+
+        ret, window = cv2.meanShift(dst, self.track_window, self.term_criteria)
+        self.track_window = window
+
+        return window
+
+    def update_window(self, img, new_window):
+        if self.track_window is not None:
+            return False
+
+        self.track_window = new_window
+
+        # Setup ROI for tracking.
+        x, y, w, h = self.track_window
+        hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+        mask = cv2.inRange(hsv, numpy.array((0., 60., 32.)),
+            numpy.array((180., 255., 255.)))
+
+        hsv_roi, mask_roi = hsv[y:y+h, x:x+w], mask[y:y+h, x:x+w]
+        hist = cv2.calcHist([hsv_roi], [0], mask_roi, [32], [0, 180])
+
+        self.hist = cv2.normalize(hist, 0, 255, cv2.NORM_MINMAX)
+        return True

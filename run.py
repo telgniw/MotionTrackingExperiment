@@ -21,6 +21,7 @@ class Main:
         self.window = Window('Camera')
 
         self.detector = Detector()
+        self.trackers = []
 
     def loop(self):
         runner = CmdRunner(self)
@@ -41,10 +42,22 @@ class Main:
                 self.window.set_image(img)
 
                 rects = self.detector.detect(img)
-                for rect in rects:
+                while len(self.trackers) < len(rects):
+                    self.trackers.append(Tracker())
+
+                for tracker, rect in zip(self.trackers, rects):
+                    if rect is not None:
+                        ret = tracker.update_window(img, rect)
+                        self.window.draw_rectangle(rect, (255, 0, 255))
+                        if ret:
+                            continue
+
+                    rect = tracker.track(img)
+                    if rect is None:
+                        continue
                     self.window.draw_rectangle(rect, (255, 0, 0))
-            except Exception as e:
-                print >> sys.stderr, e
+            #except Exception as e:
+            #    print >> sys.stderr, e
             finally:
                 self.window.update()
                 runner.join(0)

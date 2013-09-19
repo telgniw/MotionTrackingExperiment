@@ -13,7 +13,7 @@ class Window:
 
     def draw_rectangle(self, rect, color):
         x, y, w, h = rect
-        cv2.rectangle(self.img, (x, y), (x + w, y + h), color,
+        cv2.rectangle(self.img, (x,y), (x+w, y+h), color,
             thickness=Window.THICKNESS)
 
     def draw_polylines(self, poly, color):
