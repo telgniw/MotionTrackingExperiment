@@ -1,5 +1,7 @@
 #!/usr/bin/env python
-import cv2, numpy
+import cv2, numpy, sys
+
+from lib.window import Window
 import util
 
 class Target:
@@ -30,10 +32,30 @@ class Detector:
 
         self.targets = []
 
+        # For debug use.
+        self.window = Window('Debug')
+        self.window.clear()
+        self.window.update()
+
+    # For debug use.
+    def _draw_all(self, target, color):
+        for pt in target.pts():
+            x, y = pt.pt
+            self.window.draw_dot((int(x), int(y)), color)
+
+    # For debug use.
+    def _draw_matches(self, matches, target, color):
+        for m in matches:
+            if type(m) is list:
+                m = m[0]
+            x, y = target.pts()[m.queryIdx].pt
+            self.window.draw_dot((int(x), int(y)), color)
+
     def _knn_match(self, tl, tr):
         try:
             matches = self.matcher.knnMatch(tl.des(), tr.des(), Detector.NN_K)
         except:
+            print >> sys.stderr, 'Warning: no match.'
             return []
 
         f_nnk   = lambda m: len(m) >= 2
@@ -104,7 +126,15 @@ class Detector:
         # Reference the RobustMatcher for matching
         # http://stackoverflow.com/a/9894455/881930
         matches = self._symmetric_match(tl, tr)
+
+        # For debug use.
+        self._draw_matches(matches, tl, color=(255, 255, 0))
+
         matches = self._ransac(cv2.FM_RANSAC, matches, tl, tr)
+
+        # For debug use.
+        self._draw_matches(matches, tl, color=(0, 255, 0))
+
         return self._homography_rect(matches, tl, tr)
 
     def add_image(self, img):
@@ -116,10 +146,17 @@ class Detector:
     def detect(self, img):
         source = Target(img, self)
 
+        # For debug use.
+        self.window.set_image(numpy.copy(img))
+        self._draw_all(source, (0, 0, 255))
+
         rects = []
         for target in self.targets:
             rect = self._match(source, target)
             rects.append(rect)
+
+        # For debug use.
+        self.window.update()
 
         return rects
 

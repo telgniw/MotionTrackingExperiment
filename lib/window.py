@@ -10,6 +10,10 @@ class Window:
 
     def clear(self):
         self.img = numpy.zeros((480, 640, 3), numpy.uint8)
+        self.original_img = self.img
+
+    def draw_dot(self, dot, color):
+        cv2.circle(self.img, dot, 1, color, thickness=1)
 
     def draw_rectangle(self, rect, color):
         x, y, w, h = rect
@@ -26,6 +30,7 @@ class Window:
 
     def set_image(self, img):
         self.img = img
+        self.original_img = self.img
 
     def snapshot(self, filename):
-        return cv2.imwrite(filename, self.img)
+        return cv2.imwrite(filename, self.original_img)
