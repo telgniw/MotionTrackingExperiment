@@ -32,6 +32,10 @@ class Cmd(cmd.Cmd):
         self.main.do_switch_camera(cid)
         print 'Switching to camera', cid
 
+    def do_clear(self, _):
+        self.main.do_clear()
+        print 'Clearing rectangles on screen'
+
     def do_snapshot(self, filename):
         if filename:
             filename = os.path.abspath(filename)
