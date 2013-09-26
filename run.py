@@ -1,10 +1,10 @@
 #!/usr/bin/env python
-#-*- coding: utf8 -*-
 from lib.cli import CmdRunner
 
 from lib.camera import Camera
 from lib.window import Window
 
+from lib.filtering import *
 from lib.tracking import *
 
 import sys
@@ -27,6 +27,8 @@ class Main:
 
         self.should_detect = True
         self.trackers = []
+
+        self.color_filter = ColorFilter()
 
     def add_target(self, filename):
         self.trackers.append(Tracker(filename))
@@ -52,7 +54,9 @@ class Main:
                     continue
 
                 img = cv2.resize(img, (640, 480))
-                self.window.set_image(img)
+
+                # TODO: show color mask
+                color_mask = self.color_filter.filter(img)
 
                 next_should_detect = self.should_detect
                 for tracker in self.trackers:

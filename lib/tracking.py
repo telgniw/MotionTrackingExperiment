@@ -137,7 +137,7 @@ class Tracker:
         # https://github.com/abidrahmank/OpenCV2-Python-Tutorials/ (buggy)
         # and Panaroid Android for bug-fixing
         # http://jayrambhia.wordpress.com/2012/07/11/face-tracking-with-camshift-using-opencvsimplecv/
-        hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         dst = cv2.calcBackProject([hsv], [0], self.hist, [0, 180], 1)
 
         ret, window = cv2.meanShift(dst, self.track_window, self.term_criteria)
