@@ -147,7 +147,7 @@ class Detector:
         source = Target(img, self)
 
         # For debug use.
-        self.window.set_image(numpy.copy(img))
+        self.window.set_image(img)
         self._draw_all(source, (0, 0, 255))
 
         rects = []

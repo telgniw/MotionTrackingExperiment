@@ -29,8 +29,8 @@ class Window:
         return cv2.waitKey(int(1000 / self.fps))
 
     def set_image(self, img):
-        self.img = img
-        self.original_img = self.img
+        self.img = numpy.copy(img)
+        self.original_img = numpy.copy(img)
 
     def snapshot(self, filename):
         return cv2.imwrite(filename, self.original_img)
